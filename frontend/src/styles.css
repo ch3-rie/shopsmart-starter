@@ -51,6 +51,12 @@ form { display: grid; gap: 1rem; }
 .empty-state, .success-card { text-align: center; padding: 4rem 1rem; }
 .recommendations { display: grid; gap: .6rem; }
 .recommendations a { background: #e6fffb; border-radius: .6rem; padding: .8rem; color: #115e59; font-weight: 700; text-decoration: none; }
+.field-hint { color: #58677a; font-weight: 600; margin: 0; }
+.assistant-loading { color: #0f766e; font-weight: 700; }
+.assistant-sources { margin-top: 1rem; }
+.assistant-sources h3 { margin: 0 0 .4rem; font-size: 1rem; }
+.assistant-sources ul { margin: 0; padding-left: 1.1rem; }
+.assistant-sources a { color: #115e59; font-weight: 700; }
 @media (max-width: 820px) {
   .toolbar { grid-template-columns: 1fr 1fr; }
   .toolbar label:first-child { grid-column: 1 / -1; }

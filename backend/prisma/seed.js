@@ -1,5 +1,11 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+
+if (process.env.SHOPSMART_ALLOW_SEED !== 'yes') {
+  console.error('Refusing to seed. This command deletes every product, order, and order item. Set SHOPSMART_ALLOW_SEED=yes only for a disposable database.');
+  process.exit(1);
+}
+
+const { PrismaClient } = await import('@prisma/client');
 const prisma = new PrismaClient();
 
 const products = [

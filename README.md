@@ -183,6 +183,7 @@ Prisma will connect using `backend/.env` and create the Product, Order and Order
 Run:
 
 ```powershell
+$env:SHOPSMART_ALLOW_SEED = "yes"
 npm run db:seed
 ```
 
@@ -192,7 +193,7 @@ The terminal should display:
 Seeded 6 ShopSmart products.
 ```
 
-Running this command again deletes existing classroom orders and restores the six sample products. Do not reseed a database containing work you need to keep.
+The command refuses to run until `SHOPSMART_ALLOW_SEED` is `yes`. With that confirmation, running it again deletes existing classroom orders and restores the six sample products. Do not reseed a database containing work you need to keep.
 
 ### 8. Run the automated checks
 
@@ -304,7 +305,7 @@ Stop the previous ShopSmart process with `Ctrl+C`. Do not change ports unless th
 
 ### Products do not appear
 
-Verify http://localhost:3000/api/health, then run `npm run db:seed` and restart `npm run dev`.
+Verify http://localhost:3000/api/health. For an empty classroom database, set `SHOPSMART_ALLOW_SEED` to `yes`, run `npm run db:seed`, and restart `npm run dev`. Do not seed a database whose orders or products must be kept.
 
 ### The browser reports a CORS error
 
@@ -318,8 +319,9 @@ Confirm that the front end uses http://localhost:5173 and that `FRONTEND_URL=htt
 | `npm run dev` | Run front end and API |
 | `npm run check` | Lint, test and build |
 | `npm run db:generate` | Generate Prisma Client |
-| `npm run db:migrate` | Create or update database tables |
-| `npm run db:seed` | Reset and insert sample data |
+| `npm run db:migrate` | Create or update local development tables. Do not use this on a production database |
+| `npm run db:migrate:deploy` | Apply committed migrations on a shared or production database |
+| `npm run db:seed` | Reset and insert sample data. Refuses unless `SHOPSMART_ALLOW_SEED=yes` |
 | `npm run db:studio` | Open the Prisma database viewer |
 
 Read `docs/TEACHING_ROADMAP.md` for the weekly improvement plan.

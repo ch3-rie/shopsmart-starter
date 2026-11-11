@@ -8,7 +8,8 @@ const STOP_WORDS = new Set([
   'budget', 'peso', 'pesos', 'php', 'product', 'products', 'item', 'items', 'can', 'does', 'are',
   'there', 'get', 'buy', 'some', 'from', 'into', 'about', 'how', 'much', 'who', 'was', 'were', 'will',
   'just', 'also', 'not', 'but', 'its', 'shop', 'shopsmart', 'currently', 'within', 'most', 'lowest',
-  'price', 'priced', 'something', 'would', 'could', 'should', 'help', 'make', 'like', 'good', 'best'
+  'price', 'priced', 'something', 'would', 'could', 'should', 'help', 'make', 'like', 'good', 'best',
+  'can', 'cost', 'costs', 'costing'
 ]);
 
 const SYNONYMS = {
@@ -28,7 +29,9 @@ const SYNONYMS = {
   lamp: ['lamp', 'lamps'],
   lamps: ['lamp', 'lamps'],
   stand: ['stand', 'stands'],
-  stands: ['stand', 'stands']
+  stands: ['stand', 'stands'],
+  study: ['study', 'studying'],
+  studying: ['study', 'studying']
 };
 
 const FOCUS_PATTERNS = [
@@ -58,6 +61,10 @@ const CLAIM_TERMS = [
   'aluminum', 'aluminium', 'microphone', 'silent', 'optical', 'hot-swappable', 'tactile', '4k',
   '8k', '1080p', '1440p', 'hdmi', 'usb-c', 'usb', 'adjustable', 'privacy'
 ];
+
+const OPTIONAL_TERMS = new Set(
+  CLAIM_TERMS.flatMap((term) => term.toLowerCase().split(/[^a-z0-9]+/)).filter((term) => term.length > 2)
+);
 
 const SUPERLATIVES = /\b(best|fastest|newest|highest quality|top-rated|top rated|award-winning|premium)\b/i;
 const UNSUPPORTED_AVAILABILITY = /\b(out of stock|sold out|unavailable)\b/i;
@@ -136,11 +143,29 @@ function variantsFor(term) {
   return variants;
 }
 
+function wordsIn(text) {
+  return new Set(String(text).split(/[^a-z0-9]+/).filter(Boolean));
+}
+
 function termMatches(text, term) {
+  const words = wordsIn(text);
   for (const variant of variantsFor(term)) {
-    if (text.includes(variant)) return true;
+    if (words.has(variant) || words.has(`${variant}s`)) return true;
   }
   return false;
+}
+
+function productHead(name) {
+  return String(name ?? '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).at(-1) || '';
+}
+
+// "Laptop Stand" and its "for laptops" description are a stand, not a laptop.
+// Count that word only when the question also asks for a stand.
+function termApplies(product, term, question) {
+  if (!termMatches(searchableText(product), term)) return false;
+  const asksForLaptop = term === 'laptop' || term === 'laptops';
+  if (asksForLaptop && productHead(product.name) === 'stand' && !/\bstands?\b/i.test(question)) return false;
+  return true;
 }
 
 function isCheapestRequest(question) {
@@ -152,7 +177,7 @@ function focusLabel(question) {
   for (const [pattern, label] of FOCUS_PATTERNS) {
     if (pattern.test(text)) return label;
   }
-  return extractTerms(question)[0] || null;
+  return null;
 }
 
 function pluralize(label) {
@@ -165,6 +190,7 @@ function searchableText(product) {
 
 export function rankProducts(products, question) {
   const terms = extractTerms(question);
+  const required = terms.filter((term) => !OPTIONAL_TERMS.has(term));
   const budgetCents = parseBudget(question);
   const budgetLimit = budgetCents === null ? null : toCents(budgetCents);
   const cheapest = isCheapestRequest(question);
@@ -177,12 +203,12 @@ export function rankProducts(products, question) {
       if (!Number.isFinite(stock) || stock <= 0 || cents === null) return false;
       return budgetLimit === null || cents <= budgetLimit;
     })
-    .map((product) => {
-      const text = searchableText(product);
-      const score = terms.reduce((total, term) => total + (termMatches(text, term) ? 1 : 0), 0);
-      return { ...product, price: toCents(product.price) / 100, score };
+    .flatMap((product) => {
+      const score = terms.reduce((total, term) => total + (termApplies(product, term, question) ? 1 : 0), 0);
+      const requiredScore = required.reduce((total, term) => total + (termApplies(product, term, question) ? 1 : 0), 0);
+      const matches = required.length > 0 ? requiredScore === required.length : terms.length === 0 || score > 0;
+      return matches ? [{ ...product, price: toCents(product.price) / 100, score }] : [];
     })
-    .filter((product) => terms.length === 0 || product.score > 0)
     .sort((left, right) => {
       if (cheapest) return toCents(left.price) - toCents(right.price) || right.score - left.score;
       return right.score - left.score || toCents(left.price) - toCents(right.price);

@@ -11,7 +11,13 @@ export default function ProductDetailsPage() {
   const { addToCart, cartMessage } = useCart();
 
   useEffect(() => {
-    api.getProduct(productId).then(setProduct).catch((caught) => setError(caught.message));
+    let active = true;
+    setError('');
+    setProduct(null);
+    api.getProduct(productId)
+      .then((nextProduct) => { if (active) setProduct(nextProduct); })
+      .catch((caught) => { if (active) setError(caught.message); });
+    return () => { active = false; };
   }, [productId]);
 
   if (error) return <section><StatusMessage type="error">{error}</StatusMessage><Link to="/">Return to products</Link></section>;

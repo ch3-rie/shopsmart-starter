@@ -141,6 +141,92 @@ test('a named out-of-stock product is not replaced by a different product', asyn
   assert.deepEqual(result.sources, []);
 });
 
+test('a short search word is not matched inside a longer catalog word', () => {
+  const catalog = [
+    { id: 2, name: 'Compact Mechanical Keyboard', category: 'Accessories', description: 'Hot-swappable compact keyboard with tactile switches.', price: 1850, stock: 6, active: true },
+    { id: 6, name: 'USB Headset', category: 'Audio', description: 'Over-ear headset with noise-reducing boom microphone.', price: 1350, stock: 7, active: true }
+  ];
+  const key = buildAssistantResponse(catalog, 'Do you have a key?');
+  assert.match(key.answer, /couldn't find an in-stock product/i);
+  assert.equal(key.answer.includes('Keyboard'), false);
+  assert.deepEqual(key.recommendedProducts, []);
+  assert.deepEqual(key.sources, []);
+
+  const set = buildAssistantResponse(catalog, 'Show me a set');
+  assert.match(set.answer, /couldn't find an in-stock product/i);
+  assert.equal(set.answer.includes('Headset'), false);
+  assert.deepEqual(set.recommendedProducts, []);
+});
+
+test('a request for a laptop does not recommend the laptop stand', () => {
+  const catalog = [
+    { id: 5, name: 'Laptop Stand', category: 'Study', description: 'Foldable aluminum stand for laptops up to 16 inches.', price: 1200, stock: 9, active: true },
+    { id: 1, name: 'Wireless Mouse', category: 'Accessories', description: 'Quiet wireless mouse with adjustable sensitivity and USB receiver.', price: 650, stock: 12, active: true }
+  ];
+  for (const question of ['Do you have a gaming laptop?', 'Do you have a laptop?']) {
+    const result = buildAssistantResponse(catalog, question);
+    assert.match(result.answer, /couldn't find an in-stock product/i);
+    assert.equal(result.answer.includes('Laptop Stand'), false);
+    assert.deepEqual(result.recommendedProducts, []);
+    assert.deepEqual(result.sources, []);
+  }
+
+  const stand = buildAssistantResponse(catalog, 'Do you have a laptop stand?');
+  assert.equal(stand.recommendedProducts[0].id, 5);
+  assert.match(stand.answer, /Laptop Stand is currently available for ₱1,200/);
+
+  const mouse = buildAssistantResponse(catalog, 'Recommend an affordable gaming mouse.');
+  assert.equal(mouse.recommendedProducts[0].id, 1);
+  assert.match(mouse.answer, /Wireless Mouse is currently available for ₱650/);
+  assert.equal(mouse.answer.includes('Laptop Stand'), false);
+});
+
+test('an unknown product name is not replaced by a loosely related catalog item', () => {
+  const catalog = [
+    { id: 5, name: 'Laptop Stand', category: 'Study', description: 'Foldable aluminum stand for laptops up to 16 inches.', price: 1200, stock: 9, active: true },
+    { id: 2, name: 'Compact Mechanical Keyboard', category: 'Accessories', description: 'Hot-swappable compact keyboard with tactile switches.', price: 1850, stock: 8, active: true }
+  ];
+  const result = buildAssistantResponse(catalog, 'Do you have an Ultra Gaming Laptop X?');
+  assert.match(result.answer, /couldn't find an in-stock product/i);
+  assert.equal(result.answer.includes('Laptop Stand'), false);
+  assert.equal(result.answer.includes('ultra'), false);
+  assert.deepEqual(result.recommendedProducts, []);
+  assert.deepEqual(result.sources, []);
+});
+
+test('a budget with no catalog match names a product instead of a leftover question word', () => {
+  const result = buildAssistantResponse(products, 'Do you have a product costing less than ₱100?');
+  assert.match(result.answer, /couldn't find an in-stock product within your ₱100 budget/i);
+  assert.equal(result.answer.includes('costing'), false);
+  assert.deepEqual(result.recommendedProducts, []);
+});
+
+test('a study budget question recommends in-stock study products within the budget', () => {
+  const catalog = [
+    { id: 2, name: 'Compact Mechanical Keyboard', category: 'Accessories', description: 'Hot-swappable compact keyboard with tactile switches.', price: 1850, stock: 6, active: true },
+    { id: 3, name: 'USB-C Study Lamp', category: 'Study', description: 'Adjustable desk lamp with three brightness levels.', price: 900, stock: 8, active: true },
+    { id: 5, name: 'Laptop Stand', category: 'Study', description: 'Foldable aluminum stand for laptops up to 16 inches.', price: 1200, stock: 9, active: true },
+    { id: 1, name: 'Wireless Mouse', category: 'Accessories', description: 'Quiet wireless mouse with adjustable sensitivity and USB receiver.', price: 650, stock: 11, active: true }
+  ];
+  const result = buildAssistantResponse(catalog, 'Can you recommend a product for studying with a budget of ₱1,500?');
+  assert.deepEqual(result.recommendedProducts.map((product) => product.id), [3, 5]);
+  assert.match(result.answer, /₱900/);
+  assert.match(result.answer, /₱1,200/);
+  assert.equal(result.answer.includes('Keyboard'), false);
+  assert.equal(result.answer.includes('Mouse'), false);
+});
+
+test('a keyboard budget question still recommends only the matching keyboard', () => {
+  const catalog = [
+    { id: 2, name: 'Compact Mechanical Keyboard', category: 'Accessories', description: 'Hot-swappable compact keyboard with tactile switches.', price: 1850, stock: 8, active: true },
+    { id: 1, name: 'Wireless Mouse', category: 'Accessories', description: 'Quiet wireless mouse with adjustable sensitivity and USB receiver.', price: 650, stock: 12, active: true }
+  ];
+  const result = buildAssistantResponse(catalog, 'What keyboard can I buy under ₱2,000?');
+  assert.match(result.answer, /Compact Mechanical Keyboard is currently available for ₱1,850/);
+  assert.equal(result.answer.includes('Wireless Mouse'), false);
+  assert.deepEqual(result.recommendedProducts.map((product) => product.id), [2]);
+});
+
 test('no matching product skips the provider and returns an empty grounded response', async () => {
   let calls = 0;
   const outcome = await handleAssistantQuestion({ question: 'Find a monitor under ₱500' }, {

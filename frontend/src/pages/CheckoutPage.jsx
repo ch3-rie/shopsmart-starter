@@ -38,6 +38,7 @@ export default function CheckoutPage() {
       <p className="eyebrow">ORDER RECEIVED</p>
       <h1>Thank you, {order.customerName}!</h1>
       <p>Your simulated order number is <strong>#{order.id}</strong>.</p>
+      <p>Status: <strong>{order.status}</strong></p>
       <p>Total: <strong>₱{Number(order.total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong></p>
       <Link className="button" to="/">Continue shopping</Link>
     </section>

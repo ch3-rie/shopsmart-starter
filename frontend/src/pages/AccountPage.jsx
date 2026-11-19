@@ -25,7 +25,10 @@ export default function AccountPage() {
   const [ordersError, setOrdersError] = useState('');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const next = searchParams.get('next') === '/checkout' ? '/checkout' : null;
+  // Only these in-app pages may be returned to after sign-in (never an outside URL).
+  const requested = searchParams.get('next') || '';
+  const next = requested === '/checkout' || /^\/account\/orders\/\d+$/.test(requested) ? requested : null;
+  const toCheckout = next === '/checkout';
 
   useEffect(() => {
     if (!customer) return undefined;
@@ -85,11 +88,12 @@ export default function AccountPage() {
 
         <div className="auth-panel">
           <h2>Sign in</h2>
-          {next && (
+          {toCheckout && (
             <p className="auth-context">
               Sign in to finish checking out. Your cart{itemCount > 0 ? ` (${itemCount} ${itemCount === 1 ? 'item' : 'items'})` : ''} is kept.
             </p>
           )}
+          {next && !toCheckout && <p className="auth-context">Sign in to view this order.</p>}
           <StatusMessage type="error">{error}</StatusMessage>
 
           <form className="auth-form" onSubmit={submit}>
@@ -123,7 +127,7 @@ export default function AccountPage() {
           <p className="auth-note">
             <strong>Classroom demo.</strong> Use only the fictional test accounts your team created. No real payment is taken.
           </p>
-          <Link className="auth-back" to={next || '/'}>{next ? '← Back to checkout' : '← Continue browsing products'}</Link>
+          <Link className="auth-back" to={toCheckout ? '/checkout' : '/'}>{toCheckout ? '← Back to checkout' : '← Continue browsing products'}</Link>
         </div>
       </div>
     </section>
@@ -150,7 +154,8 @@ export default function AccountPage() {
       {orders.length > 0 && (
         <ul className="order-list">
           {orders.map((order) => (
-            <li key={order.id} className="order-card">
+            <li key={order.id}>
+              <Link className="order-card order-card-link" to={`/account/orders/${order.id}`}>
               <div className="order-card-head">
                 <strong>Order #{order.id}</strong>
                 <span className="order-status">{order.status}</span>
@@ -165,6 +170,8 @@ export default function AccountPage() {
                 ))}
               </ul>
               <p className="order-total"><span>Total</span><strong>{peso(order.total)}</strong></p>
+              <span className="order-card-more">View details →</span>
+              </Link>
             </li>
           ))}
         </ul>

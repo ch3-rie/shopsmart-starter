@@ -7,6 +7,7 @@ import CartPage from './pages/CartPage.jsx';
 import CheckoutPage from './pages/CheckoutPage.jsx';
 import AssistantPage from './pages/AssistantPage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
+import OrderDetailsPage from './pages/OrderDetailsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/account/orders/:orderId" element={<OrderDetailsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

@@ -67,3 +67,16 @@ test('/api/auth/me reports no customer for a guest', async () => {
     assert.deepEqual(await response.json(), { customer: null });
   });
 });
+
+test('a guest is refused the saved cart', async () => {
+  await withServer(async (base) => {
+    const read = await fetch(`${base}/cart`);
+    assert.equal(read.status, 401);
+    const save = await fetch(`${base}/cart`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: [{ productId: 1, quantity: 1 }] })
+    });
+    assert.equal(save.status, 401);
+  });
+});

@@ -47,6 +47,8 @@ router.post('/', async (request, response, next) => {
         });
         if (updated.count !== 1) throw Object.assign(new Error('Stock changed while placing the order.'), { status: 409, code: 'STOCK_CHANGED' });
       }
+      // The order now holds these items, so the customer's saved cart is emptied.
+      await transaction.cartItem.deleteMany({ where: { customerId: request.customer.id } });
       return transaction.order.create({
         data: {
           customerName: parsed.data.customerName, email: parsed.data.email, address: parsed.data.address, total,

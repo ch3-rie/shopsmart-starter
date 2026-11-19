@@ -13,6 +13,16 @@ export const orderSchema = z.object({
   )
 });
 
+export const cartSchema = z.object({
+  items: z.array(z.object({
+    productId: z.coerce.number().int().positive(),
+    quantity: z.coerce.number().int().min(1).max(100)
+  })).max(50).refine(
+    (items) => new Set(items.map((item) => item.productId)).size === items.length,
+    { message: 'Each product may appear only once in the cart.' }
+  )
+});
+
 export const loginSchema = z.object({
   email: z.string().trim().min(3).max(254).transform((value) => value.toLowerCase()),
   password: z.string().min(1).max(200)

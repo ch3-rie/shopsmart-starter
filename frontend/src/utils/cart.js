@@ -57,3 +57,15 @@ export function updateCartQuantity(cart, productId, quantity) {
     error: ''
   };
 }
+
+// Combines the customer's saved cart with anything added before signing in.
+// Matching products add up, but never beyond the available stock.
+export function mergeCarts(savedItems, localItems) {
+  const merged = savedItems.map((item) => ({ ...item }));
+  for (const local of localItems) {
+    const existing = findCartItem(merged, local.productId);
+    if (existing) existing.quantity = Math.min(existing.quantity + local.quantity, existing.stock);
+    else merged.push({ ...local });
+  }
+  return merged;
+}

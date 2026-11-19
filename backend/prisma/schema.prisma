@@ -19,6 +19,7 @@ model Product {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   orderItems  OrderItem[]
+  cartItems   CartItem[]
 }
 
 // Fictional classroom customer. Created only with scripts/create-customer.js.
@@ -30,6 +31,7 @@ model Customer {
   createdAt    DateTime  @default(now())
   orders       Order[]
   sessions     Session[]
+  cartItems    CartItem[]
 }
 
 // Server-side session. The browser cookie holds a random token; only its SHA-256 hash is stored.
@@ -70,5 +72,20 @@ model OrderItem {
   product   Product  @relation(fields: [productId], references: [id])
 
   @@index([orderId])
+  @@index([productId])
+}
+
+// A signed-in customer's saved cart: one row per product. Price and stock are
+// always read from Product, so a saved cart never holds a stale price.
+model CartItem {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  productId  Int
+  quantity   Int
+  updatedAt  DateTime @updatedAt
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productId])
   @@index([productId])
 }

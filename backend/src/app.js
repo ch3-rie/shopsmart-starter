@@ -7,6 +7,7 @@ import productsRouter from './routes/products.js';
 import ordersRouter from './routes/orders.js';
 import assistantRouter from './routes/assistant.js';
 import authRouter from './routes/auth.js';
+import cartRouter from './routes/cart.js';
 import { loadCustomer } from './lib/auth.js';
 import { prisma } from './lib/prisma.js';
 
@@ -44,6 +45,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/products', productsRouter);
   app.use('/api/orders', ordersRouter);
+  app.use('/api/cart', cartRouter);
   app.use('/api/assistant', assistantRouter);
   app.use((_request, response) => response.status(404).json({ error: { code: 'ROUTE_NOT_FOUND', message: 'API route could not be found.' } }));
   app.use((error, request, response, _next) => {

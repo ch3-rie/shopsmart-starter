@@ -1,7 +1,9 @@
 # ShopSmart deployment plan
 
-Date: 8 November 2026  
-Status: local release candidate. Live staging was not performed because approved hosting and database access were unavailable.
+Date: 8 November 2026 (plan). Updated 20 November 2026  
+Status: **hosted on AWS EC2** at https://shopsmart-santos.duckdns.org since 19 November 2026. Sections 1 to 11 are the original plan, kept for the record. Section 12 describes what was actually deployed.
+
+Diagrams: `docs/deployment/architecture.png` (original plan), `docs/deployment/architecture-hosted.png` (as deployed)
 
 Diagram: `docs/deployment/architecture.png`
 
@@ -162,3 +164,34 @@ This procedure was executed against localhost. It was not executed against a hos
 - Orders stay `PENDING`.
 - Gemini remains optional and is off until a server-side key is supplied.
 - The local PostgreSQL identity sequence is ahead of the two remaining fictional orders because controlled stock probes created and then deleted intermediate rows. That does not affect totals or stock.
+
+## 12. Hosted deployment (19–20 November 2026)
+
+The plan's production shape was implemented on a **single EC2 host**. The decision and its trade-offs are in `docs/deployment/decision-record.md`.
+
+| Part | Hosted value |
+| --- | --- |
+| Site | https://shopsmart-santos.duckdns.org |
+| Health check | https://shopsmart-santos.duckdns.org/api/health |
+| Region | ap-southeast-2 (Sydney) |
+| Frontend | Vite build served by Nginx from `/var/www/shopsmart`, with the SPA rewrite to `index.html` |
+| API | Express run by systemd (`deploy/shopsmart.service`) on `127.0.0.1:3000`, behind Nginx at `/api/` |
+| Database | PostgreSQL 16 on the same instance, `127.0.0.1:5432` only |
+| HTTPS | Let's Encrypt via certbot; HTTP redirects to HTTPS |
+
+Environment on the host, in `/home/ubuntu/shopsmart.env` (mode 600, not in the repository):
+
+| Variable | Value class | Hosted value |
+| --- | --- | --- |
+| `NODE_ENV` | Configuration | `production` |
+| `HOST` / `PORT` | Configuration | `127.0.0.1` / `3000` |
+| `TRUST_PROXY` | Configuration | `1` (one Nginx hop) |
+| `FRONTEND_URL` | Configuration | `https://shopsmart-santos.duckdns.org` |
+| `DATABASE_URL` | Secret | Generated password. Not copied here |
+| `GEMINI_API_KEY` | Secret | Empty |
+| `VITE_API_URL` | Public, at build time | `https://shopsmart-santos.duckdns.org/api` |
+
+Migrations were applied with `npm run db:migrate:deploy` only. The empty hosted database was seeded once on 19 November 2026 and is never seeded again. The verification procedure in section 10 was executed against the hosted site. The results are in `docs/quality/hosted-verification-2026-11-20.md`.
+
+The redeploy steps for a new commit are: `git pull`, `npm ci`, `npm run db:generate`, `npm run db:migrate:deploy` (with the env file loaded), `VITE_API_URL=https://shopsmart-santos.duckdns.org/api npm run build`, copy `frontend/dist` to `/var/www/shopsmart`, then `sudo systemctl restart shopsmart`.
+

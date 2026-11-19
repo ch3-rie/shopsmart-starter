@@ -6,6 +6,8 @@ import morgan from 'morgan';
 import productsRouter from './routes/products.js';
 import ordersRouter from './routes/orders.js';
 import assistantRouter from './routes/assistant.js';
+import authRouter from './routes/auth.js';
+import { loadCustomer } from './lib/auth.js';
 import { prisma } from './lib/prisma.js';
 
 export function resolveCorsOrigin(env = process.env) {
@@ -19,11 +21,16 @@ export function resolveCorsOrigin(env = process.env) {
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
+  // Behind Nginx on EC2, trust exactly one proxy hop so rate limits use the
+  // visitor's address from X-Forwarded-For instead of 127.0.0.1.
+  if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
   app.use(helmet());
-  app.use(cors({ origin: resolveCorsOrigin() }));
+  // credentials: true lets the local dev frontend (port 5173) send the session cookie to port 3000.
+  app.use(cors({ origin: resolveCorsOrigin(), credentials: true }));
   app.use((request, response, next) => { request.id = crypto.randomUUID(); response.setHeader('X-Request-ID', request.id); next(); });
   app.use(express.json({ limit: '100kb' }));
   app.use(morgan(':method :url :status :response-time ms'));
+  app.use('/api', loadCustomer);
 
   app.get('/api/health', async (request, response) => {
     try {
@@ -34,6 +41,7 @@ export function createApp() {
       response.status(503).json({ status: 'unavailable' });
     }
   });
+  app.use('/api/auth', authRouter);
   app.use('/api/products', productsRouter);
   app.use('/api/orders', ordersRouter);
   app.use('/api/assistant', assistantRouter);

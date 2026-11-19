@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev --name initial_schema",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "customer:create": "node scripts/create-customer.js"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",

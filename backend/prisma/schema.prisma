@@ -21,6 +21,29 @@ model Product {
   orderItems  OrderItem[]
 }
 
+// Fictional classroom customer. Created only with scripts/create-customer.js.
+model Customer {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  orders       Order[]
+  sessions     Session[]
+}
+
+// Server-side session. The browser cookie holds a random token; only its SHA-256 hash is stored.
+model Session {
+  id         Int      @id @default(autoincrement())
+  tokenHash  String   @unique
+  customerId Int
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
 model Order {
   id           Int         @id @default(autoincrement())
   customerName String
@@ -29,7 +52,12 @@ model Order {
   status       String      @default("PENDING")
   total        Decimal     @db.Decimal(10, 2)
   createdAt    DateTime    @default(now())
+  // Nullable so orders created before accounts existed are preserved by the migration.
+  customerId   Int?
+  customer     Customer?   @relation(fields: [customerId], references: [id])
   items        OrderItem[]
+
+  @@index([customerId])
 }
 
 model OrderItem {

@@ -1,0 +1,21 @@
+# /etc/systemd/system/shopsmart.service
+[Unit]
+Description=ShopSmart Express API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shopsmart-starter/backend
+# Server-only settings, readable only by the ubuntu user. Never commit this file.
+EnvironmentFile=/home/ubuntu/shopsmart.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+# Output goes to the journal: journalctl -u shopsmart
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

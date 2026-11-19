@@ -21,10 +21,26 @@ const assistantLimiter = rateLimit({
 
 router.post('/questions', assistantLimiter, async (request, response, next) => {
   try {
+    // answerSource tells the customer and the instructor whether a live provider
+    // draft was used or the catalog rules answered. The service logs only when it
+    // rejects a draft or falls back, so a provider call with no log means the
+    // validated provider draft was returned.
+    let providerCalled = false;
+    let fellBack = false;
     const outcome = await handleAssistantQuestion(request.body, {
       retrieve: (question) => retrieveCatalog(prisma, question),
-      generate: generateRecommendation
+      generate: (input) => {
+        providerCalled = true;
+        return generateRecommendation(input);
+      },
+      logger: (message) => {
+        fellBack = true;
+        console.error(message);
+      }
     });
+    if (outcome.status === 200) {
+      outcome.body.answerSource = providerCalled && !fellBack ? 'ai_provider' : 'catalog_rules';
+    }
     response.status(outcome.status).json(outcome.body);
   } catch (error) {
     next(error);

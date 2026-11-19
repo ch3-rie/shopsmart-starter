@@ -3,7 +3,9 @@ import { createApp } from './app.js';
 import { prisma } from './lib/prisma.js';
 
 const port = Number(process.env.PORT || 3000);
-const server = createApp().listen(port, () => console.log(`ShopSmart API running at http://localhost:${port}`));
+// On EC2 set HOST=127.0.0.1 so only Nginx on the same machine can reach the API process.
+const host = process.env.HOST || '0.0.0.0';
+const server = createApp().listen(port, host, () => console.log(`ShopSmart API running at http://${host}:${port}`));
 
 async function shutdown(signal) {
   console.log(`\n${signal} received. Closing ShopSmart API.`);
